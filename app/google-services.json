@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "827631483846",
+    "project_id": "ohli-social-39559",
+    "storage_bucket": "ohli-social-39559.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827631483846:android:b34c713d3785aa53a9d0c7",
+        "android_client_info": {
+          "package_name": "com.rk.ohlisocial"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHvnUZg013p-qFq-9ifhhFnP5RDO16nMM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

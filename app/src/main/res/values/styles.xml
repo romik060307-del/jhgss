@@ -1,0 +1,11 @@
+<resources>
+    <style name="OhliTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#9B75FF</item>
+        <item name="android:statusBarColor">#080C18</item>
+        <item name="android:navigationBarColor">#080C18</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#080C18</item>
+    </style>
+</resources>

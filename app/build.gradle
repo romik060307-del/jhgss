@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.rk.ohlisocial'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.rk.ohlisocial'
+        minSdk 26
+        targetSdk 35
+        versionCode 3
+        versionName '1.2.0'
+        buildConfigField 'String', 'SERVER_FALLBACK_URL', '"https://bonds-kick-graduates-include.trycloudflare.com/"'
+        buildConfigField 'String', 'SERVER_CONFIG_URL', '"https://ohlisocial.netlify.app/server.json"'
+    }
+
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+}
+
+// The project compiles without Firebase configuration, but background push is enabled only
+// after the real google-services.json for package com.rk.ohlisocial is added to app/.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.18.0'
+    implementation platform('com.google.firebase:firebase-bom:35.1.0')
+    implementation 'com.google.firebase:firebase-messaging'
+}
