@@ -1,0 +1,113 @@
+name: Build OHLI Social Client APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build OHLI Social Client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses and install packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install Gradle 8.9 with retry and checksum verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="8.9"
+          ZIP="$RUNNER_TEMP/gradle-$VERSION-bin.zip"
+          mkdir -p "$RUNNER_TEMP/gradle-dist"
+          downloaded=false
+          for URL in \
+            "https://downloads.gradle.org/distributions/gradle-$VERSION-bin.zip" \
+            "https://services.gradle.org/distributions/gradle-$VERSION-bin.zip"; do
+            echo "Mengunduh $URL"
+            if curl --fail --location --silent --show-error --retry 6 --retry-all-errors --retry-delay 4 --connect-timeout 20 --max-time 600 "$URL" -o "$ZIP" && test -s "$ZIP"; then
+              downloaded=true
+              break
+            fi
+          done
+          if [ "$downloaded" != true ]; then
+            echo "Distribusi Gradle tidak berhasil diunduh dari kedua alamat resmi." >&2
+            exit 1
+          fi
+          CHECKSUM=""
+          for URL in \
+            "https://services.gradle.org/distributions/gradle-$VERSION-bin.zip.sha256" \
+            "https://downloads.gradle.org/distributions/gradle-$VERSION-bin.zip.sha256"; do
+            CHECKSUM=$(curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 20 --max-time 120 "$URL" || true)
+            CHECKSUM=$(printf '%s' "$CHECKSUM" | tr -d '[:space:]')
+            if [[ "$CHECKSUM" =~ ^[a-fA-F0-9]{64}$ ]]; then break; fi
+            CHECKSUM=""
+          done
+          if [ -z "$CHECKSUM" ]; then
+            echo "Checksum Gradle resmi tidak dapat diambil; build dihentikan demi integritas unduhan." >&2
+            exit 1
+          fi
+          echo "$CHECKSUM  $ZIP" | sha256sum --check --status
+          unzip -q "$ZIP" -d "$RUNNER_TEMP/gradle-dist"
+          echo "$RUNNER_TEMP/gradle-dist/gradle-$VERSION/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gradle-dist/gradle-$VERSION/bin/gradle" --version
+
+      - name: Verify project and web assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f settings.gradle
+          test -f build.gradle
+          test -f app/build.gradle
+          test -s app/src/main/java/com/rk/ohlisocial/MainActivity.java
+          test -s app/src/main/assets/index.html
+          test -s app/src/main/assets/ohli-social.css
+          test -s app/src/main/assets/ohli-social.js
+          test -s app/src/main/assets/offline-cache.js
+          grep -q 'ohlisocial.netlify.app/server.json' app/build.gradle
+          grep -q 'firebase-messaging' app/build.gradle
+          test -s app/src/main/java/com/rk/ohlisocial/OhliFirebaseMessagingService.java
+          test -s app/src/main/java/com/rk/ohlisocial/OhliNotificationReplyReceiver.java
+          test -s app/src/main/res/raw/ohli_call_video.wav
+          grep -q 'offline-cache.js' app/src/main/assets/index.html
+          grep -q 'androidx.webkit:webkit:1.18.0' app/build.gradle
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -l "$APK" | grep -q 'assets/index.html'
+          unzip -l "$APK" | grep -q 'assets/ohli-social.js'
+          unzip -l "$APK" | grep -q 'classes.dex'
+          sha256sum "$APK"
+
+      - name: Upload OHLI Social APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OHLI-Social-Client-APK-v1.2.0
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
